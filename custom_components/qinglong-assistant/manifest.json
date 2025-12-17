@@ -1,6 +1,6 @@
 {
-  "domain": "qinglong",
-  "name": "青龙面板",
+  "domain": "qinglong-assistant",
+  "name": "青龙面板助手",
   "version": "1.0.0",
   "documentation": "https://github.com/whyour/qinglong",
   "issue_tracker": "https://github.com/whyour/qinglong/issues",
@@ -10,4 +10,5 @@
   "config_flow": true,
   "iot_class": "local_polling",
   "homeassistant": "2022.3.0"
+
 }
