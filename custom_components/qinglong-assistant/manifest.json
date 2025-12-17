@@ -10,4 +10,6 @@
   "config_flow": true,
   "iot_class": "local_polling",
   "homeassistant": "2022.3.0"
+  "icon": "icon.png"
+
 }
