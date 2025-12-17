@@ -3,7 +3,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "配置青龙面板",
+        "title": "配置青龙面板助手",
         "description": "请输入青龙面板的连接信息",
         "data": {
           "host": "主机地址",
@@ -23,5 +23,4 @@
       "already_configured": "此青龙面板已配置"
     }
   }
-
 }
