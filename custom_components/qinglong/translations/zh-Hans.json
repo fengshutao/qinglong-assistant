@@ -1,0 +1,26 @@
+{
+  "title": "青龙面板助手",
+  "config": {
+    "step": {
+      "user": {
+        "title": "配置青龙面板",
+        "description": "请输入青龙面板的连接信息",
+        "data": {
+          "host": "主机地址",
+          "port": "端口",
+          "client_id": "Client ID",
+          "client_secret": "Client Secret",
+          "ssl": "使用SSL"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接到青龙面板",
+      "invalid_auth": "认证失败，请检查Client ID和Client Secret",
+      "unknown": "发生未知错误"
+    },
+    "abort": {
+      "already_configured": "此青龙面板已配置"
+    }
+  }
+}
