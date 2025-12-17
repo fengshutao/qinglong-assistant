@@ -3,9 +3,10 @@
   "render_readme": true,
   "country": ["CN"],
   "homeassistant": "2022.3.0",
-  "domains": ["qinglong-assistant"],
+  "domains": ["qinglong"],
   "iot_class": "local_polling"
 }
+
 
 
 
