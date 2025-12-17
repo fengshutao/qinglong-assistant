@@ -1,6 +1,6 @@
 """Constants for QingLong integration."""
 
-DOMAIN = "qinglong-assistant"
+DOMAIN = "qinglong"
 
 # Configuration
 CONF_HOST = "host"
@@ -25,5 +25,4 @@ TOKEN_REFRESH_THRESHOLD = 86400  # 提前1天刷新token (24小时)
 TOKEN_EXPIRY_BUFFER = 3600  # 1小时缓冲时间
 
 # Platforms
-
 PLATFORMS = ["sensor", "select", "button"]
