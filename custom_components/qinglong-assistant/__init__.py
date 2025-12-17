@@ -5,11 +5,12 @@ import logging
 import time
 import aiohttp
 import async_timeout
-from typing import Any
+import json
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN, 
@@ -20,9 +21,6 @@ from .const import (
     CONF_TOKEN_EXPIRES,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
-    CONF_SSL,
-    CONF_HOST,
-    CONF_PORT,
     TOKEN_REFRESH_THRESHOLD,
     TOKEN_EXPIRY_BUFFER,
 )
@@ -194,7 +192,7 @@ class QingLongClient:
             expires_display = "已过期"
         
         return {
-            "token": self._token,  # 返回完整token，而不是截断的
+            "token": self._token[:20] + "..." if len(self._token) > 20 else self._token,
             "token_expires": self._token_expires,
             "expires_in": expires_in,
             "expires_display": expires_display,
@@ -247,12 +245,18 @@ class QingLongClient:
             await self._session.close()
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the QingLong component."""
+    hass.data.setdefault(DOMAIN, {})
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up QingLong from a config entry."""
     
-    host = entry.data.get(CONF_HOST)
-    port = entry.data.get(CONF_PORT)
-    ssl = entry.data.get(CONF_SSL, False)
+    host = entry.data.get("host")
+    port = entry.data.get("port")
+    ssl = entry.data.get("ssl", False)
     token = entry.data.get(CONF_TOKEN)
     token_expires = entry.data.get(CONF_TOKEN_EXPIRES, 0)
     client_id = entry.data.get(CONF_CLIENT_ID)
@@ -272,7 +276,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Failed to get initial data: %s", err)
     
     # Store data
-    hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "host": host,
         "port": port,

@@ -1,9 +1,9 @@
 {
-  "domain": "qinglong-assistant",
-  "name": "青龙面板助手",
+  "domain": "qinglong",
+  "name": "青龙面板",
   "version": "1.0.0",
-  "documentation": "https://github.com/fengshutao/ha-qinglong-assistant",
-  "issue_tracker": "https://github.com/fengshutao/ha-qinglong-assistant/issues",
+  "documentation": "https://github.com/whyour/qinglong",
+  "issue_tracker": "https://github.com/whyour/qinglong/issues",
   "requirements": ["aiohttp>=3.8.0"],
   "dependencies": [],
   "codeowners": ["@yourusername"],

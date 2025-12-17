@@ -74,12 +74,11 @@ class QingLongTaskSelect(SelectEntity):
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
         # 现在self.hass已经可用，可以更新选项
-        await self.async_update()
+        self._update_options()
     
     def _update_options(self):
         """Update select options from tasks data."""
         if not self._client:
-            _LOGGER.debug("Client not available, skipping options update")
             return
         
         # 从hass.data获取最新的tasks_data
@@ -125,12 +124,10 @@ class QingLongTaskSelect(SelectEntity):
         self._options = sorted(enabled_tasks)
         self._attr_options = self._options
         
-        # 如果没有当前选择且存在选项，选择第一个选项
+        # 如果没有当前选择，选择第一个选项
         if not self._current_option and self._options:
             self._current_option = self._options[0]
             self._attr_current_option = self._current_option
-        
-        _LOGGER.debug("Updated options: %s", self._options)
     
     @property
     def options(self) -> list[str]:
@@ -225,8 +222,6 @@ class QingLongTaskSelect(SelectEntity):
                     _LOGGER.debug("Task select updated with %d options", len(self._options))
             except Exception as err:
                 _LOGGER.error("Error updating task select: %s", err)
-        else:
-            _LOGGER.debug("Client not available for update")
     
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -235,6 +230,7 @@ class QingLongTaskSelect(SelectEntity):
             "host": self._host,
             "port": self._port,
             "last_updated": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            "polling_interval": "30秒",
             "available_tasks": len(self._options),
         }
         

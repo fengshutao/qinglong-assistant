@@ -11,7 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, TOKEN_REFRESH_THRESHOLD, TOKEN_EXPIRY_BUFFER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,21 +75,25 @@ class QingLongTokenSensor(SensorEntity):
         """Update sensor state from client."""
         if self._client:
             token_info = self._client.get_token_info()
+            current_time = int(time.time())
             
             # 设置主值：显示完整的token字符串
-            self._attr_native_value = token_info["token"]
+            # 从client获取完整token（而不是token_info中的部分token）
+            self._attr_native_value = self._client._token
             
             # 设置额外属性
             self._attr_extra_state_attributes = {
                 "host": self._host,
                 "port": self._port,
+                # 注意：这里不再包含token_preview属性
                 "token_expires_at": token_info["expires_at"],
                 "token_expires_in_seconds": token_info["expires_in"],
                 "token_expires_display": token_info["expires_display"],
                 "is_valid": token_info["is_valid"],
                 "needs_refresh": token_info["needs_refresh"],
                 "last_refresh_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(token_info["last_refresh_time"])) if token_info["last_refresh_time"] > 0 else "从未刷新",
-                "last_updated": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+                "last_updated": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(current_time)),
+                "polling_interval": "30秒",
             }
         else:
             self._attr_native_value = "客户端未初始化"
@@ -97,7 +101,13 @@ class QingLongTokenSensor(SensorEntity):
                 "host": self._host,
                 "port": self._port,
                 "connection_status": "disconnected",
+                "polling_interval": "30秒",
             }
+    
+    @property
+    def native_value(self) -> str:
+        """Return sensor value."""
+        return self._attr_native_value
     
     async def async_update(self) -> None:
         """Update sensor state."""
@@ -112,6 +122,7 @@ class QingLongTokenSensor(SensorEntity):
             await self._client._refresh_token_if_needed()
             self._last_update = current_time
             self._update_state()
+            _LOGGER.debug("Token sensor updated")
 
 
 class QingLongTasksSensor(SensorEntity):
@@ -165,10 +176,11 @@ class QingLongTasksSensor(SensorEntity):
         """Get tasks list attributes."""
         attributes = {
             "total_tasks": len(tasks_list),
-            "commands": [],
+            "commands": [],  # 将原来的"task_names"改为"commands"
             "enabled_tasks": 0,
             "disabled_tasks": 0,
             "last_updated": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            "polling_interval": "30秒",
         }
         
         for task in tasks_list:
@@ -221,6 +233,8 @@ class QingLongTasksSensor(SensorEntity):
                 
                 # Update stored data
                 self.hass.data[DOMAIN][self._entry.entry_id]["tasks"] = new_tasks_data
+                
+                _LOGGER.debug("Tasks sensor updated with %d tasks", len(tasks_list))
                 
         except Exception as err:
             _LOGGER.error("Error updating tasks sensor: %s", err)
