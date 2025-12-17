@@ -1,5 +1,5 @@
 {
-  "title": "青龙面板",
+  "title": "青龙面板助手",
   "config": {
     "step": {
       "user": {
@@ -23,4 +23,5 @@
       "already_configured": "此青龙面板已配置"
     }
   }
+
 }
