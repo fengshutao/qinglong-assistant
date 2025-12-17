@@ -51,6 +51,8 @@ class QingLongTaskSelect(SelectEntity):
         self._port = port
         self._tasks_data = tasks_data
         self._last_update = 0
+        self._select_time = 0  # 记录选中时间
+        self._clear_select_timer = None  # 清除选中状态的定时器
         
         # Entity properties
         self._attr_name = "运行定时任务"
@@ -125,12 +127,24 @@ class QingLongTaskSelect(SelectEntity):
         self._options = sorted(enabled_tasks)
         self._attr_options = self._options
         
-        # 如果没有当前选择且存在选项，选择第一个选项
-        if not self._current_option and self._options:
-            self._current_option = self._options[0]
-            self._attr_current_option = self._current_option
+        # 不默认选中任何选项，移除以下代码：
+        # if not self._current_option and self._options:
+        #     self._current_option = self._options[0]
+        #     self._attr_current_option = self._current_option
         
         _LOGGER.debug("Updated options: %s", self._options)
+    
+    async def _clear_selected_option(self):
+        """Clear the selected option after 1 minute."""
+        _LOGGER.debug("Clearing selected option after timeout")
+        self._current_option = None
+        self._attr_current_option = None
+        self._select_time = 0
+        self.async_write_ha_state()
+        
+        # 清除存储的选择状态
+        if DOMAIN in self.hass.data and self._entry.entry_id in self.hass.data[DOMAIN]:
+            self.hass.data[DOMAIN][self._entry.entry_id]["selected_task"] = None
     
     @property
     def options(self) -> list[str]:
@@ -149,6 +163,7 @@ class QingLongTaskSelect(SelectEntity):
         
         self._current_option = option
         self._attr_current_option = option
+        self._select_time = time.time()  # 记录选中时间
         
         # 运行状态跟踪
         run_status = {
@@ -188,6 +203,19 @@ class QingLongTaskSelect(SelectEntity):
                 "run_status": run_status
             }
         
+        # 设置1分钟后清除选中状态的定时器
+        if self._clear_select_timer:
+            self._clear_select_timer()
+        
+        # 在HA中创建定时器，1分钟后清除选中状态
+        def _clear_timer_callback():
+            self.hass.async_create_task(self._clear_selected_option())
+        
+        self._clear_select_timer = self.hass.loop.call_later(
+            60,  # 60秒 = 1分钟
+            _clear_timer_callback
+        )
+        
         # 更新状态
         self.async_write_ha_state()
     
@@ -197,6 +225,10 @@ class QingLongTaskSelect(SelectEntity):
         
         # 检查是否需要更新（避免过于频繁的API调用）
         if current_time - self._last_update < 30:
+            # 检查是否应该清除选中状态（如果选中时间超过1分钟）
+            if self._current_option and self._select_time > 0:
+                if current_time - self._select_time > 60:
+                    await self._clear_selected_option()
             return
             
         if self._client:
@@ -212,21 +244,29 @@ class QingLongTaskSelect(SelectEntity):
                     # 更新选项
                     self._update_options()
                     
-                    # 如果当前选项不在新选项中，重置为第一个选项
+                    # 如果当前选项不在新选项中，清除选中状态
                     if self._current_option and self._current_option not in self._options:
-                        if self._options:
-                            self._current_option = self._options[0]
-                            self._attr_current_option = self._current_option
-                        else:
-                            self._current_option = None
-                            self._attr_current_option = None
+                        await self._clear_selected_option()
                             
                     # 记录更新状态
                     _LOGGER.debug("Task select updated with %d options", len(self._options))
+                    
+                # 检查是否应该清除选中状态（如果选中时间超过1分钟）
+                if self._current_option and self._select_time > 0:
+                    if current_time - self._select_time > 60:
+                        await self._clear_selected_option()
+                        
             except Exception as err:
                 _LOGGER.error("Error updating task select: %s", err)
         else:
             _LOGGER.debug("Client not available for update")
+    
+    async def async_will_remove_from_hass(self):
+        """Run when entity will be removed from hass."""
+        # 清除定时器
+        if self._clear_select_timer:
+            self._clear_select_timer.cancel()
+        await super().async_will_remove_from_hass()
     
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -236,7 +276,14 @@ class QingLongTaskSelect(SelectEntity):
             "port": self._port,
             "last_updated": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
             "available_tasks": len(self._options),
+            "is_selected": self._current_option is not None,
         }
+        
+        # 添加选中时间信息
+        if self._select_time > 0:
+            attrs["selected_since"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self._select_time))
+            attrs["selected_seconds_ago"] = int(time.time() - self._select_time)
+            attrs["will_clear_in"] = max(0, 60 - (time.time() - self._select_time))
         
         # 添加最近运行任务的状态
         selected_task = self.hass.data[DOMAIN][self._entry.entry_id].get("selected_task")
